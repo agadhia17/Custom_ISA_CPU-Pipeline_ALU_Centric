@@ -13,6 +13,7 @@ OVERVIEW:
 
 
 ARCHITECTURE SUMMARY:
+  * See CPU_Pipeline_Diagram.png for visual block diagram
   * 4-stage in-order pipeline:
       - Instruction Fetch (IF)
       - Instruction Decode / Register Read (ID)
