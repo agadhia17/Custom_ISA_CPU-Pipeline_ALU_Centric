@@ -74,7 +74,7 @@ VERIFICATION METHODOLOGY:
       - Demonstrate RAW hazard behavior
   * Internal state verified via:
       - Hierarchical register file access
-      - Waveform inspection (VCD)
+      - Waveform inspection (EPWave)
 
 
 HOW TO RUN:
