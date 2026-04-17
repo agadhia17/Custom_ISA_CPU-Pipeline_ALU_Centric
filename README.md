@@ -1,7 +1,7 @@
 # Custom-ISA-4-Stage-ALU-Centric-CPU-Pipeline-in-SystemVerilog
 A custom 16-bit, 4-stage pipelined CPU (Fetch, Decode, Execute, Writeback) implemented in SystemVerilog. 
 Instructions are loaded from a text-based ROM. Verified with a self-checking testbench using tasks and directed tests, 
-including RAW hazard-aware instruction scheduling.
+including hardware-based RAW hazard resolution via EX/WB forwarding.
 
 
 OVERVIEW:
@@ -9,6 +9,7 @@ OVERVIEW:
   * Implements a simple opcode-driven ISA with immediate, register-type, and shift instructions
   * Designed to explore CPU microarchitecture, pipelining, and verification
   * Verified using a self-checking testbench and waveform analysis
+  * Implements EX/WB → EX data forwarding to resolve RAW hazards without pipeline stalls
   * Focused on correctness and clarity rather than feature completeness
 
 
@@ -46,32 +47,46 @@ PIPELINE OPERATION:
   * Instruction fetch uses a text-initialized ROM ($readmemh)
   * Decode stage:
      - Generates ALU control signals combinationally
-     - Reads register operands from the register file
+     - Reads register operands from the register file 
   * Execute stage:
-     -  Performs ALU operations (add, subtract, logic, shifts)
+     - Performs ALU operations (add, subtract, logic, shifts)
+     - Receives forwarded operands when RAW hazards are detected
   * Writeback stage:
       - Commits ALU results to the register file on the clock edge
       - One instruction completes per cycle in steady state (after pipeline fill)
 
 
 HAZARD HANDLING:
-  * No hardware-based forwarding or pipeline stall mechanisms are implemented.
-  * The processor is susceptible to Read-After-Write (RAW) data hazards due to in-order execution.
-  * Correct execution is ensured through instruction scheduling at the program level.
-  * Dependent instructions are separated by independent operations, allowing register writes to complete before subsequent reads.
-  * Avoids pipeline bubbles while maintaining correctness, mirroring early compiler-scheduled pipelines.
+  * Implements EX/WB → EX data forwarding to resolve Read-After-Write (RAW) hazards.
+  * Forwarding logic:
+      - Compares EX-stage source register addresses with EX/WB destination register
+      - Forwards ALU results directly to EX-stage operands when dependencies are detected
+      - Uses operand muxing in the top-level datapath to select between forwarded and pipeline values
+  * Supported hazard cases:
+      - Back-to-back RAW dependencies on source A (rs)
+      - Back-to-back RAW dependencies on source B (rt) for R-type instructions
+  * Correctness safeguards:
+      - Immediate instructions do not falsely forward into operand B
+      - Register r0 remains hardwired to zero and is excluded from forwarding
+  * Limitations:
+      - No stall or hazard detection unit (forwarding-only solution)
+      - Load-use hazards not applicable (ALU-only pipeline)
 
 
 VERIFICATION METHODOLOGY:
-  * Instruction programs loaded from a text-based ROM file
+  * Instruction programs loaded from a text-based ROM file 
   * Testbench features:
       - Clock and synchronous reset generation
       - Self-checking tasks to validate final register file contents
-      - Immediate simulation termination on failure ($fatal)
+      - Immediate simulation termination on failure ($fatal)    
   * Directed test programs:
       - Exercise every opcode
-      - Validate pipeline timing
-      - Demonstrate RAW hazard behavior
+      - Validate pipeline timing    
+  * Additional directed tests for forwarding:
+      - Source-A (rs) forwarding
+      - Source-B (rt) forwarding for R-type instructions
+      - Immediate false-forward protection
+      - Zero-register (r0) forwarding suppression  
   * Internal state verified via:
       - Hierarchical register file access
       - Waveform inspection (EPWave)
@@ -82,7 +97,7 @@ HOW TO RUN:
   * Required files:
       - design.sv (CPU RTL)
       - testbench.sv
-      - instr_mem.txt (instruction ROM contents)
+      - instr_mem.txt (instruction ROM contents)   
   * Steps:
       - Upload all files to the Design/Testbench windows
       - Run simulation
@@ -90,7 +105,7 @@ HOW TO RUN:
 
 
 LIMITATIONS FOR FUTURE WORK:
-  * No forwarding or pipeline stalls
+  * No pipeline stalls or hazard detection unit (forwarding-only hazard resolution)
   * No branch or jump instructions
   * No data memory (load/store)
   * Potential extensions:
@@ -107,5 +122,6 @@ KEY TAKEAWAYS:
       - ISA design tradeoffs
       - RAW hazards and scheduling
       - RTL verification techniques
+  * Data hazard resolution using forwarding (bypass logic)
   * Serves as a foundation for more advanced CPU designs
 
